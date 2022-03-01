@@ -27,11 +27,14 @@ except ModuleNotFoundError:
     print('Ошибка загрузки модуля.\nВыполните команду:\npython -m pip install -r requirements.txt')
     raise
 
+from bad_list import bad_list
+
 MAIN_FILE_NAME = 'zakupki.xlsx'
 headers = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
+    'user-agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0',
         }
 base_url = 'https://zakupki.gov.ru'
+
 
 def main():
     global script_start_time
@@ -114,134 +117,37 @@ def main():
 
 def command_line_processing():
     parser = argparse.ArgumentParser(
-        description = 'Анализ торгов на сайте Zakupki.gov.ru',
+        description='Анализ торгов на сайте Zakupki.gov.ru',
         )
     parser.add_argument(
         'stage',
-        metavar = 'STAGE',
-        nargs = '?',
-        default = 1,
-        type = int,
-        help = 'Этап работы, варианты: 1, 2 или 3',
-        choices = [1, 2, 3],
+        metavar='STAGE',
+        nargs='?',
+        default=1,
+        type=int,
+        help='Этап работы, варианты: 1, 2 или 3',
+        choices=[1, 2, 3],
         )
     parser.add_argument(
         '-i', '--inn',
-        metavar = 'INN',
-        nargs = '+',
-        help = 'ИНН (один или несколько) для сбора статистики; на этапе 1 должен быть указан. На этапах 2-3 параметр будет проигнорирован',
-        dest = 'inn',
-        default = [],
+        metavar='INN',
+        nargs='+',
+        help='ИНН (один или несколько) для сбора статистики; на этапе 1 должен быть указан. На этапах 2-3 параметр будет проигнорирован',
+        dest='inn',
+        default=[],
         )
     parser.add_argument(
         '-y', '--year',
-        metavar = 'YEAR',
-        nargs = '+',
-        type = int,
-        help = 'Год (годы) для сбора статистики на этапе 1; если не указан: будет использован текущий год. На этапах 2-3 параметр будет проигнорирован',
-        dest = 'year',
-        default = [],
+        metavar='YEAR',
+        nargs='+',
+        type=int,
+        help='Год (годы) для сбора статистики на этапе 1; если не указан: будет использован текущий год. На этапах 2-3 параметр будет проигнорирован',
+        dest='year',
+        default=[],
         )
     args = parser.parse_args()
     return args
 
-bad_list = ['лекарствен.*препарат',
-            'лекарствен.*средств',
-            'клинич.*лаборатор',
-            'диагностич.*реагент',
-            'кислород',
-            'травматолог',
-            'бактериолог',
-            'нарколог',
-            'патологоанатом',
-            'нефтепродукт',
-            'бензин',
-            'мясо',
-            'колбас',
-            'масл.*растительн',
-            'молок',
-            'молочн',
-            'ультрафиолетов',
-            'ехническ.*обслуживан',
-            'авиацион.*работ',
-            'капитальн.*ремонт',
-            'текущ.*ремонт',
-            'оказание.*услуг',
-            'проектн.*работ',
-            'лабораторн.*исследован',
-            'детск.*питани',
-            'канцелярск',
-            'дезинфицирующ.*средств',
-            'курин.*яйц',
-            'офтальмолог',
-            'медицинск.*мебел',
-            'реагент.*определен',
-            'оставк.*посуд',
-            'бакалейн',
-            'кухон.*издел',
-            'оставк.*мяс',
-            'биохимич.*исследов',
-            'продукт.*питани',
-            'услуг',
-            'теплов.*энерг',
-            'бытов.*хими',
-            'бумаг.*картон',
-            'ыполнен.*работ',
-            'оставк.*картофел',
-            'оставк.*хлеб',
-            'препарат.*диагностич',
-            'бель.*стерильн',
-            'ларингеальн',
-            'интраокулярн',
-            'искусствен.*вентиляц.*легк',
-            'набор.*реагент',
-            'осветительн',
-            'перчат.*медицинск',
-            'материал.*анализатор',
-            'урологич',
-            'цитофлюориметр',
-            'микробиологич',
-            'оставк.*рыбы',
-            'салфет.*рулон',
-            'оставк.*сахар',
-            'оставк.*сметан',
-            'оставк.*сока',
-            'оставк.*соли',
-            'спецодежд',
-            'стиральн',
-            'стоматолог',
-            'фрукт',
-            'оставк.*яблок',
-            'оставк.*овощ',
-            'капитальн.*ремонт',
-            'рукавиц',
-            'дезинфицирующ',
-            'маск.*хирургич',
-            'нкассац',
-            'протез.*сустав',
-            'сыра',
-            'творог',
-            'автомобиль',
-            'кефир',
-            'клиник.*диагностич.*лаборатор',
-            'аминокислот',
-            'ремонт',
-            'право.*использован',
-            'бумаг.*офис',
-            'перевязочн.*материал',
-            'канцеляр',
-            'мебел',
-            'видео.*наблюден',
-            'огнетушит',
-            'услуги',
-            'противопожар',
-            'сантех',
-            'одежд',
-            'строительн',
-            'топлив[ао]',
-            'энтеральн',
-            'бумага',
-            ]
 
 class WS_wrapper:
     def __init__(self, ws):
@@ -296,6 +202,7 @@ class WS_wrapper:
         self.new_ID += 1
         self[index] = record
 
+
 def get_wrapper(wb, sheet_name, position):
     if sheet_name in wb:
         sheet = wb[sheet_name]
@@ -304,11 +211,12 @@ def get_wrapper(wb, sheet_name, position):
     wrapper = WS_wrapper(sheet)
     return wrapper
 
+
 def make_do_not_exists(file_name):
-    '''Make name for file that do not exists
+    """Make name for file that do not exists
 
 Input: `file_name` - some name for file
-Output: file name (the same or modified) do not exists'''
+Output: file name (the same or modified) do not exists"""
 
     while os.path.exists(file_name):
         path, name = os.path.split(file_name)
@@ -321,6 +229,7 @@ Output: file name (the same or modified) do not exists'''
         file_name = os.path.join(path, name)
             
     return file_name
+
 
 def do_stage_one(wb, inn_list, years):
     jobs = get_wrapper(wb, 'jobs', 1)
@@ -360,6 +269,7 @@ def do_stage_one(wb, inn_list, years):
             
         jobs[i] = job
 
+
 def complete_the_task(lots, job):
     target_inn = str(job['INN'])
     target_year = int(job['year'])
@@ -368,34 +278,14 @@ def complete_the_task(lots, job):
     print(f'Ищем аукционы для ИНН {target_inn} за год {target_year}, месяц {target_month}')
     
     extended_search = 'https://zakupki.gov.ru/epz/order/extendedsearch/results.html'
-    params = {
-        'morphology': 'on',
-        'sortDirection': 'false',
-        'recordsPerPage': '_50',
-        'showLotsInfoHidden': 'false',
-        'sortBy': 'UPDATE_DATE',
-        'fz44': 'on',
-        'fz223': 'on',
-        'af': 'on', # Подача заявок
-        'ca': 'on', # Работа комиссии
-        'pc': 'on', # Закупка завершена
-        'pa': 'on', # Закупка отменена
-        'priceContractAdvantages44IdNameHidden': '%7B%7D',
-        'priceContractAdvantages94IdNameHidden': '%7B%7D',
-        'currencyIdGeneral': '-1',
-        'selectedSubjectsIdNameHidden': '%7B%7D',
-        'OrderPlacementSmallBusinessSubject': 'on',
-        'OrderPlacementRnpData': 'on',
-        'OrderPlacementExecutionRequirement': 'on',
-        'orderPlacement94_0': '0',
-        'orderPlacement94_1': '0',
-        'orderPlacement94_2': '0',
-        'contractPriceCurrencyId': '-1',
-        'budgetLevelIdNameHidden': '%7B%7D',
-        'nonBudgetTypesIdNameHidden': '%7B%7D',
-    }
-
-    params['searchString'] = target_inn # ИНН ЛПУ
+    params = {'morphology': 'on', 'sortDirection': 'false', 'recordsPerPage': '_50', 'showLotsInfoHidden': 'false',
+              'sortBy': 'UPDATE_DATE', 'fz44': 'on', 'fz223': 'on', 'af': 'on', 'ca': 'on', 'pc': 'on', 'pa': 'on',
+              'priceContractAdvantages44IdNameHidden': '%7B%7D', 'priceContractAdvantages94IdNameHidden': '%7B%7D',
+              'currencyIdGeneral': '-1', 'selectedSubjectsIdNameHidden': '%7B%7D',
+              'OrderPlacementSmallBusinessSubject': 'on', 'OrderPlacementRnpData': 'on',
+              'OrderPlacementExecutionRequirement': 'on', 'orderPlacement94_0': '0', 'orderPlacement94_1': '0',
+              'orderPlacement94_2': '0', 'contractPriceCurrencyId': '-1', 'budgetLevelIdNameHidden': '%7B%7D',
+              'nonBudgetTypesIdNameHidden': '%7B%7D', 'searchString': target_inn}
 
     date1 = datetime.date(target_year, target_month, 1)
     _, m = calendar.monthrange(target_year, target_month)
@@ -434,6 +324,7 @@ def complete_the_task(lots, job):
         
         pageNumber += 1
 
+
 def work_with_searchresult(lots, soup):
     count = 0
     for data_block in soup.find_all('div', class_='search-registry-entry-block box-shadow-search-input'):
@@ -447,8 +338,8 @@ def work_with_searchresult(lots, soup):
             # 'last_date': None,
             }
         
-        part = data_block.find('div', class_='registry-entry__header-top__title text-truncate')
-        
+        part = data_block.find('div', class_='registry-entry__header-top__title')
+
         values = [stripped for e in part.text.split(sep='\n') if (stripped:=e.strip())]
         assert len(values) == 2
         record['fz'] = values[0]
