@@ -1,30 +1,33 @@
-﻿'''
+﻿"""
 TODO
 - скачивание контрактов
 - борьба с вылетами (перехват исключений на все операции с внешним миром)
 - борьба с ошибками записи в Excel файл
-- качественное скачивание информации о лотах на этапе 2 (улучение чтения таблицы)
+- качественное скачивание информации о лотах на этапе 2
+    (улучшение чтения таблицы)
 - разноцветный вывод в командную строку?
 - управление форматом данных в файле?
 - использование последнего ИНН в новых запросах
-'''
+"""
 
 import sys
-import csv
 import os
 import os.path
 import re
-import datetime
+from datetime import datetime, date
 import calendar
 import argparse
 import json
-from fnmatch import fnmatch
+
 try:
     import openpyxl
     import requests
     from bs4 import BeautifulSoup
 except ModuleNotFoundError:
-    print('Ошибка загрузки модуля.\nВыполните команду:\npython -m pip install -r requirements.txt')
+    print(
+        '''Ошибка загрузки модуля.
+        Выполните команду:
+        python -m pip install -r requirements.txt''')
     raise
 
 from bad_list import bad_list
@@ -38,13 +41,13 @@ base_url = 'https://zakupki.gov.ru'
 
 def main():
     global script_start_time
-    script_start_time = datetime.datetime.now()
-    
+    script_start_time = datetime.now()
+
     script_path, script_name = os.path.split(__file__)
-    script_mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(__file__))
+    script_mod_time = datetime.fromtimestamp(os.path.getmtime(__file__))
 
     args = command_line_processing()
-    
+
     if os.path.exists(MAIN_FILE_NAME):
         print(f'Файл {MAIN_FILE_NAME} найден, он будет дополнен')
         wb = openpyxl.open(MAIN_FILE_NAME)
@@ -69,7 +72,7 @@ def main():
         if not inn_list:
             print('Не указано ИНН ЛПУ для сбора данных')
             print('Будут обработаны оставшиеся задачи по сбору данных (если они ещё есть)')
-        else:            
+        else:
             print('Обрабатываем следующие запросы:')
             for i, inn in enumerate(args.inn):
                 print(f'{i+1:3d}: {inn}')
@@ -79,7 +82,7 @@ def main():
             current_year = script_start_time.year
             for year in args.year:
                 if year < 0:
-                   continue 
+                    continue
                 if year < 100:
                     year += 2000
                 if year < 2000 or year > current_year:
@@ -92,12 +95,12 @@ def main():
             else:
                 years = sorted(set(years))
             print(f'Годы поиска: {years}')
-            
+
             log_entry['INN list'] = json.dumps(inn_list)
             log_entry['Years'] = json.dumps(years)
 
         do_stage_one(wb, inn_list, years)
-        
+
     elif args.stage == 2:
         print('Этап 2, сбор дополнительных данных по каждому лоту')
         do_stage_two(wb)
@@ -109,11 +112,12 @@ def main():
 
     try:
         wb.save(MAIN_FILE_NAME)
-    except Exception:
+    except OSError:
         alt_name = make_do_not_exists(MAIN_FILE_NAME)
         print(f'Проблема с записью в файл {MAIN_FILE_NAME}')
         print(f'Попробуем файл {alt_name}')
         wb.save(alt_name)
+
 
 def command_line_processing():
     parser = argparse.ArgumentParser(
@@ -149,7 +153,7 @@ def command_line_processing():
     return args
 
 
-class WS_wrapper:
+class WSWrapper:
     def __init__(self, ws):
         self.ws = ws
 
@@ -208,7 +212,7 @@ def get_wrapper(wb, sheet_name, position):
         sheet = wb[sheet_name]
     else:
         sheet = wb.create_sheet(sheet_name, position)
-    wrapper = WS_wrapper(sheet)
+    wrapper = WSWrapper(sheet)
     return wrapper
 
 
@@ -227,7 +231,6 @@ Output: file name (the same or modified) do not exists"""
         except Exception:
             name = f'{name.strip()} (1){ext}'
         file_name = os.path.join(path, name)
-            
     return file_name
 
 
@@ -249,14 +252,14 @@ def do_stage_one(wb, inn_list, years):
                 jobs.append(job)
 
     lots = get_wrapper(wb, 'lots', 2)
-    
+
     jobs_count = len(jobs)
     for i in range(jobs_count):
         job = jobs[i]
 
         if job['state'] == 'done':
             continue
-        
+
         try:
             complete_the_task(lots, job)
         except Exception as e:
@@ -266,7 +269,6 @@ def do_stage_one(wb, inn_list, years):
             job['state'] = 'error'
         else:
             job['state'] = 'done'
-            
         jobs[i] = job
 
 
@@ -276,7 +278,7 @@ def complete_the_task(lots, job):
     target_month = int(job['month'])
 
     print(f'Ищем аукционы для ИНН {target_inn} за год {target_year}, месяц {target_month}')
-    
+
     extended_search = 'https://zakupki.gov.ru/epz/order/extendedsearch/results.html'
     params = {'morphology': 'on', 'sortDirection': 'false', 'recordsPerPage': '_50', 'showLotsInfoHidden': 'false',
               'sortBy': 'UPDATE_DATE', 'fz44': 'on', 'fz223': 'on', 'af': 'on', 'ca': 'on', 'pc': 'on', 'pa': 'on',
@@ -287,7 +289,7 @@ def complete_the_task(lots, job):
               'orderPlacement94_2': '0', 'contractPriceCurrencyId': '-1', 'budgetLevelIdNameHidden': '%7B%7D',
               'nonBudgetTypesIdNameHidden': '%7B%7D', 'searchString': target_inn}
 
-    date1 = datetime.date(target_year, target_month, 1)
+    date1 = date(target_year, target_month, 1)
     _, m = calendar.monthrange(target_year, target_month)
     date2 = date1.replace(day=m)
 
@@ -296,9 +298,9 @@ def complete_the_task(lots, job):
 
     print(f'Период от {params["publishDateFrom"]} до {params["publishDateTo"]}')
 
-    pageNumber = 1
+    page_number = 1
     while True:
-        params['pageNumber'] = str(pageNumber)
+        params['pageNumber'] = str(page_number)
         response = requests.get(
             extended_search,
             headers=headers,
@@ -308,10 +310,10 @@ def complete_the_task(lots, job):
         if response.status_code != 200:
             print('Ошибка связи с сайтом. Запустите программу ещё раз')
             raise Exception(f'Request url {response.request.url} result {response.status_code}')
-            
+
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        if pageNumber == 1:
+        if page_number == 1:
             part = soup.find('div', 'search-results__total')
             value = part.text.strip()
             print(f'Найдено всего аукционов за период: `{value}`')
@@ -321,15 +323,14 @@ def complete_the_task(lots, job):
         count = work_with_searchresult(lots, soup)
         if count == 0:
             break
-        
-        pageNumber += 1
+        page_number += 1
 
 
 def work_with_searchresult(lots, soup):
     count = 0
     for data_block in soup.find_all('div', class_='search-registry-entry-block box-shadow-search-input'):
         count += 1
-        
+
         record = {
             'stage2': 'none',
             'stage3': 'no',
@@ -337,21 +338,21 @@ def work_with_searchresult(lots, soup):
             # 'updated': None,
             # 'last_date': None,
             }
-        
+
         part = data_block.find('div', class_='registry-entry__header-top__title')
 
-        values = [stripped for e in part.text.split(sep='\n') if (stripped:=e.strip())]
+        values = [stripped for e in part.text.split(sep='\n') if (stripped := e.strip())]
         assert len(values) == 2
         record['fz'] = values[0]
         record['subtype'] = values[1]
-        
+
         part = data_block.find('div', class_='registry-entry__header-mid__number')
         a = part.find('a')
         if record['fz'] == '44-ФЗ':
             record['link'] = base_url + a['href']
         else:
             record['link'] = a['href']
-        
+
         values = a.text.strip().split()
         assert len(values) == 2
         assert values[0] == '№'
@@ -390,12 +391,12 @@ def work_with_searchresult(lots, soup):
         record['published'] = None
         record['updated'] = None
         record['last_date'] = None
-        
+
         datas = right.find('div', class_='data-block mt-auto')
         for d in datas.find_all('div', class_='data-block__title'):
             v = d.find_next_sibling('div', class_='data-block__value')
             description = d.text.strip()
-            value = datetime.datetime.strptime(v.text, '%d.%m.%Y').date()
+            value = datetime.strptime(v.text, '%d.%m.%Y').date()
             if description == 'Размещено':
                 record['published'] = value
             elif description == 'Обновлено':
@@ -405,12 +406,11 @@ def work_with_searchresult(lots, soup):
             else:
                 print(f'Some strange value {description=}')
                 raise NotImplementedError
-                
-        print(f'{count:3d}: {record["name"]}')
 
+        print(f'{count:3d}: {record["name"]}')
         lots.append(record)
-        
     return count
+
 
 def do_stage_three(wb):
     lots = get_wrapper(wb, 'lots', 2)
@@ -439,12 +439,13 @@ def do_stage_three(wb):
 
         try:
             response = requests.get(
-            documents,
-            headers=headers,
-            params=params,
-            timeout=60)
+                documents,
+                headers=headers,
+                params=params,
+                timeout=60,
+            )
         except Exception as e:
-            print(f'Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на третий этап')
+            print('Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на третий этап')
             print('Вот описание ошибки:')
             print(e)
             continue
@@ -469,10 +470,7 @@ def do_stage_three(wb):
             dest = make_do_not_exists(dest)
 
             print(f'Скачиваем файл из {src}')
-            file = requests.get(
-                src, 
-                headers=headers,
-                timeout=60)
+            file = requests.get(src, headers=headers, timeout=60)
             print(f'Записываем файл в {dest}')
             with open(dest, 'wb') as f:
                 f.write(file.content)
@@ -481,6 +479,7 @@ def do_stage_three(wb):
 
         record['stage3'] = 'done'
         lots[index] = record
+
 
 def do_stage_two(wb):
     lots = get_wrapper(wb, 'lots', 2)
@@ -491,45 +490,52 @@ def do_stage_two(wb):
 
     common_info = 'https://zakupki.gov.ru/epz/order/notice/ea44/view/common-info.html'
     supp_base = 'https://zakupki.gov.ru/epz/order/notice/ea44/view/supplier-results.html'
-    
+
     for index in range(lots_count):
         record = lots[index]
-        if record['stage2'] == 'done':
+        if record['stage2'] not in ['none', 'error']:
             continue
 
         print(f'Аукцион #{index+1:3d} из {lots_count:3d}, на сумму {record["price"]} руб., опубликован {record["published"]}, название `{record["name"]}`')
-        
+
         if record['stage'] == 'Определение поставщика отменено':
             print(f'{record["stage"]}, пропускаю.')
             record['stage2'] = 'done'
             lots[index] = record
             continue
- 
+
+        if record["fz"] != "44-ФЗ":
+            print(f'Поддержка поиска торгов по закону {record["fz"]} пока не реализована, пропускаю')
+            record['stage2'] = 'no_law'
+            lots[index] = record
+            continue
+
         number = record['number'].replace('"', '')
         params = {'regNumber': number}
 
         # скачиваем инфу о поставщике
         try:
             response = requests.get(
-            supp_base,
-            headers=headers,
-            params=params,
-            timeout=60)
+                supp_base,
+                headers=headers,
+                params=params,
+                timeout=60,
+            )
         except Exception as e:
-            print(f'Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на второй этап')
+            print('Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на второй этап')
             print('Вот описание ошибки:')
             print(e)
             record['stage2'] = 'error'
             lots[index] = record
             continue
-            
+
         if response.status_code != 200:
             print('Ошибка связи с сайтом. Запустите программу ещё раз')
             print(f'Request url {response.request.url} result {response.status_code}')
             record['stage2'] = 'error'
             lots[index] = record
             continue
-         
+
         page = response.text
         soup = BeautifulSoup(page, 'html.parser')
         block = soup.find('div', class_='cardWrapper outerWrapper')
@@ -537,7 +543,7 @@ def do_stage_two(wb):
         block3 = block2.find('div', class_='cardHeaderBlock')
         block3_2 = block3.find_next_sibling('div')
         block4 = block3_2.find('div', class_='row blockInfo')
-        
+
         for table in block4.find_all('table'):
             thead = table.find('thead')
             thead_tr = thead.find('tr')
@@ -560,31 +566,31 @@ def do_stage_two(wb):
                     record[f'supplier{i}_price'] = td3.text.strip()
 
         # скачиваем инфу о товарах
-        
         try:
             response = requests.get(
-            common_info,
-            headers=headers,
-            params=params,
-            timeout=60)
+                common_info,
+                headers=headers,
+                params=params,
+                timeout=60,
+            )
         except Exception as e:
-            print(f'Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на второй этап')
+            print('Какая-то ошибка с получением информации с сайта, запустите программу ещё раз на второй этап')
             print('Вот описание ошибки:')
             print(e)
             record['stage2'] = 'error'
             lots[index] = record
             continue
-            
+
         if response.status_code != 200:
             print('Ошибка связи с сайтом. Запустите программу ещё раз')
             print(f'Request url {response.request.url} result {response.status_code}')
             record['stage2'] = 'error'
             lots[index] = record
             continue
-        
+
         page = response.text
         soup = BeautifulSoup(page, 'html.parser')
-        block = soup.find('div', id = 'positionKTRU')
+        block = soup.find('div', id='positionKTRU')
         table = block.find('table')
         thead = table.find('thead')
         tbody = table.find('tbody')
@@ -605,11 +611,6 @@ def do_stage_two(wb):
 
         good_number = 0
         for row in tbody.find_all('tr', class_='tableBlock__row'):
-##            td1 = row.find('td')
-##            cl1 = td1['class']
-##            if len(cl1) > 1:
-##                assert 'header' in cl1[1]
-##                continue
             good_number += 1
             for i, val in enumerate(row.find_all('td')):
                 value = val.text.strip().replace('\r', '').replace('\n', '')
@@ -626,6 +627,7 @@ def do_stage_two(wb):
 
         record['stage2'] = 'done'
         lots[index] = record
-        
+
+
 if __name__ == "__main__":
     main()
